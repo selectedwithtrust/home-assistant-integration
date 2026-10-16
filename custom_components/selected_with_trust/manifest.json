@@ -10,5 +10,5 @@
   "loggers": ["selected_with_trust"],
   "quality_scale": "platinum",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "1.0.0"
 }
