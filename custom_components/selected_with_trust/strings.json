@@ -37,6 +37,9 @@
     "binary_sensor": {
       "open_now": {
         "name": "Open now"
+      },
+      "closing_soon": {
+        "name": "Closing soon"
       }
     },
     "sensor": {
@@ -51,6 +54,12 @@
       },
       "latest_post_text": {
         "name": "Latest announcement text"
+      },
+      "rating": {
+        "name": "Rating"
+      },
+      "review_count": {
+        "name": "Reviews"
       }
     },
     "image": {
@@ -74,6 +83,19 @@
     "business_gone": {
       "title": "{name} is no longer listed",
       "description": "Selected With Trust no longer returns {name}. It may have been removed or made private. Remove this entry, or use Reconfigure to follow another business."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "closing_soon_minutes": "Closing soon lead time"
+        },
+        "data_description": {
+          "closing_soon_minutes": "Closing soon turns on this many minutes before closing."
+        }
+      }
     }
   }
 }

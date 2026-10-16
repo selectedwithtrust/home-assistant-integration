@@ -22,6 +22,8 @@ INFO = {
     "name": "Example Kitchens",
     "timezone": "Europe/Amsterdam",
     "logoUrl": f"{BASE_URL}/uploads/logo.webp",
+    "rating": 4.6,
+    "reviewCount": 38,
     "openingHours": [
         {"dayOfWeek": d, "isClosed": False, "openTime": "09:00", "closeTime": "17:00",
          "breakStart": None, "breakEnd": None}

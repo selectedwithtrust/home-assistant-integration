@@ -196,3 +196,45 @@ async def test_text_sensor_without_post(
     aioclient_mock.get(INFO_URL, json=info)
     await _setup(hass, entry)
     assert hass.states.get("sensor.example_kitchens_latest_announcement_text").state == "unknown"
+
+
+async def test_rating_reviews_closing_soon_and_options(
+    hass: HomeAssistant, entry: MockConfigEntry, aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    freezer.move_to("2026-10-12 14:00:00+00:00")  # 16:00 local, closes 17:00
+    aioclient_mock.get(INFO_URL, json=INFO)
+    await _setup(hass, entry)
+    assert hass.states.get("sensor.example_kitchens_rating").state == "4.6"
+    assert hass.states.get("sensor.example_kitchens_reviews").state == "38"
+    assert hass.states.get("binary_sensor.example_kitchens_closing_soon").state == "off"
+
+    freezer.move_to("2026-10-12 14:31:00+00:00")  # 16:31 -> within 30 min
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get("binary_sensor.example_kitchens_closing_soon").state == "on"
+
+    # Options flow changes the lead time and reloads.
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"closing_soon_minutes": 5}
+    )
+    await hass.async_block_till_done()
+    assert entry.options["closing_soon_minutes"] == 5
+    assert hass.states.get("binary_sensor.example_kitchens_closing_soon").state == "off"
+
+    freezer.move_to("2026-10-12 15:00:00+00:00")  # after close
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get("binary_sensor.example_kitchens_closing_soon").state == "off"
+
+
+async def test_no_rating_when_no_reviews(
+    hass: HomeAssistant, entry: MockConfigEntry, aioclient_mock: AiohttpClientMocker
+) -> None:
+    info = deepcopy(INFO)
+    info.pop("rating"), info.pop("reviewCount")
+    aioclient_mock.get(INFO_URL, json=info)
+    await _setup(hass, entry)
+    assert hass.states.get("sensor.example_kitchens_rating").state == "unknown"
+    assert hass.states.get("sensor.example_kitchens_reviews").state == "unknown"

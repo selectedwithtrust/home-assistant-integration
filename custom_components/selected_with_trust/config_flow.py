@@ -4,12 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     SelectSelectorMode,
     TextSelector,
 )
@@ -27,7 +36,13 @@ from .api import (
     SwtRateLimitError,
     extract_business_id,
 )
-from .const import CONF_BUSINESS_ID, CONF_BUSINESS_NAME, DOMAIN
+from .const import (
+    CONF_BUSINESS_ID,
+    CONF_BUSINESS_NAME,
+    CONF_CLOSING_SOON_MINUTES,
+    DEFAULT_CLOSING_SOON_MINUTES,
+    DOMAIN,
+)
 
 CONF_QUERY = "query"
 CONF_PICK = "business"
@@ -37,6 +52,12 @@ class SwtConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle adding or changing a followed business."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Return the options flow."""
+        return SwtOptionsFlow()
 
     def __init__(self) -> None:
         """Initialise."""
@@ -122,3 +143,30 @@ class SwtConfigFlow(ConfigFlow, domain=DOMAIN):
                 data=data,
             )
         return self.async_create_entry(title=name, data=data)
+
+
+class SwtOptionsFlow(OptionsFlow):
+    """Configure how early "closing soon" turns on."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+        current = self.config_entry.options.get(
+            CONF_CLOSING_SOON_MINUTES, DEFAULT_CLOSING_SOON_MINUTES
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_CLOSING_SOON_MINUTES, default=current): NumberSelector(
+                        NumberSelectorConfig(
+                            min=5, max=240, step=5, unit_of_measurement="min",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    )
+                }
+            ),
+        )

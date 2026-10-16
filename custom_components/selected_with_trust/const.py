@@ -19,3 +19,6 @@ UPDATE_INTERVAL: Final = timedelta(hours=6)
 SCHEDULE_HORIZON_DAYS: Final = 14
 
 ISSUE_BUSINESS_GONE: Final = "business_gone"
+
+CONF_CLOSING_SOON_MINUTES: Final = "closing_soon_minutes"
+DEFAULT_CLOSING_SOON_MINUTES: Final = 30

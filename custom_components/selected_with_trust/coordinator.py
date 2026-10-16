@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -18,6 +18,8 @@ from homeassistant.util import dt as dt_util
 from .api import SwtClient, SwtConnectionError, SwtNotFoundError, SwtRateLimitError
 from .const import (
     CONF_BUSINESS_ID,
+    CONF_CLOSING_SOON_MINUTES,
+    DEFAULT_CLOSING_SOON_MINUTES,
     DOMAIN,
     ISSUE_BUSINESS_GONE,
     SCHEDULE_HORIZON_DAYS,
@@ -101,6 +103,15 @@ class SwtCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         wake = next_local_midnight(self.data, dt_util.utcnow())
         if status.next_change is not None:
             wake = min(wake, status.next_change)
+            if status.is_open:
+                lead = timedelta(
+                    minutes=self.config_entry.options.get(
+                        CONF_CLOSING_SOON_MINUTES, DEFAULT_CLOSING_SOON_MINUTES
+                    )
+                )
+                soon = status.next_change - lead
+                if soon > dt_util.utcnow():
+                    wake = min(wake, soon)
 
         @callback
         def _fire(_now: datetime) -> None:

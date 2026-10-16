@@ -6,7 +6,11 @@ from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
@@ -31,6 +35,8 @@ async def async_setup_entry(
             SwtOpeningHoursSensor(coordinator),
             SwtLatestPostSensor(coordinator),
             SwtLatestPostTextSensor(coordinator),
+            SwtRatingSensor(coordinator),
+            SwtReviewCountSensor(coordinator),
         ]
     )
 
@@ -146,3 +152,38 @@ class SwtOpeningHoursSensor(SwtEntity, SensorEntity):
             if h.get("date")
         ]
         return {"timezone": data.get("timezone"), "week": week, "holidays": holidays}
+
+
+class SwtRatingSensor(SwtEntity, SensorEntity):
+    """Average review rating (0-5)."""
+
+    _attr_translation_key = "rating"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 1
+
+    def __init__(self, coordinator: SwtCoordinator) -> None:
+        """Initialise."""
+        super().__init__(coordinator, "rating")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the rating, or None when there are no reviews."""
+        value = (self.coordinator.data or {}).get("rating")
+        return float(value) if value is not None else None
+
+
+class SwtReviewCountSensor(SwtEntity, SensorEntity):
+    """Number of reviews."""
+
+    _attr_translation_key = "review_count"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: SwtCoordinator) -> None:
+        """Initialise."""
+        super().__init__(coordinator, "review_count")
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the review count."""
+        value = (self.coordinator.data or {}).get("reviewCount")
+        return int(value) if value is not None else None

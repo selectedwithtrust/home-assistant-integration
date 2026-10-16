@@ -7,6 +7,9 @@
           "on": "mdi:store-check",
           "off": "mdi:store-off"
         }
+      },
+      "closing_soon": {
+        "default": "mdi:clock-alert-outline"
       }
     },
     "sensor": {
@@ -21,6 +24,12 @@
       },
       "latest_post_text": {
         "default": "mdi:text-box-outline"
+      },
+      "rating": {
+        "default": "mdi:star"
+      },
+      "review_count": {
+        "default": "mdi:comment-text-multiple-outline"
       }
     }
   }
