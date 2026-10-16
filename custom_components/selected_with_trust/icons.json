@@ -1,9 +1,27 @@
 {
   "entity": {
-    "binary_sensor": { "open_now": { "default": "mdi:store-clock-outline", "state": { "on": "mdi:store-check", "off": "mdi:store-off" } } },
+    "binary_sensor": {
+      "open_now": {
+        "default": "mdi:store-clock-outline",
+        "state": {
+          "on": "mdi:store-check",
+          "off": "mdi:store-off"
+        }
+      }
+    },
     "sensor": {
-      "next_change": { "default": "mdi:clock-outline" },
-      "latest_post": { "default": "mdi:bullhorn-outline" }
+      "next_change": {
+        "default": "mdi:clock-outline"
+      },
+      "latest_post": {
+        "default": "mdi:bullhorn-outline"
+      },
+      "opening_hours": {
+        "default": "mdi:calendar-clock"
+      },
+      "latest_post_text": {
+        "default": "mdi:text-box-outline"
+      }
     }
   }
 }

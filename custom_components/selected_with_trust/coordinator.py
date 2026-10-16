@@ -23,7 +23,7 @@ from .const import (
     SCHEDULE_HORIZON_DAYS,
     UPDATE_INTERVAL,
 )
-from .schedule import Status, evaluate
+from .schedule import Status, evaluate, next_local_midnight
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,8 +95,12 @@ class SwtCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def schedule_boundary(self) -> None:
         """Wake listeners at the next open/close moment."""
         self.cancel_boundary()
-        if (status := self.status) is None or status.next_change is None:
+        if (status := self.status) is None:
             return
+        # Also wake at local midnight so "today's hours" rolls over.
+        wake = next_local_midnight(self.data, dt_util.utcnow())
+        if status.next_change is not None:
+            wake = min(wake, status.next_change)
 
         @callback
         def _fire(_now: datetime) -> None:
@@ -105,7 +109,7 @@ class SwtCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.schedule_boundary()
 
         self._unsub_boundary = async_track_point_in_utc_time(
-            self.hass, _fire, status.next_change
+            self.hass, _fire, wake
         )
 
     @callback

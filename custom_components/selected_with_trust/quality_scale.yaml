@@ -2,7 +2,7 @@ rules:
   # Bronze
   action-setup: {status: exempt, comment: Integration registers no actions.}
   appropriate-polling: done
-  brands: todo
+  brands: done
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done

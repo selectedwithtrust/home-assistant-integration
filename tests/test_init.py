@@ -163,3 +163,36 @@ async def test_diagnostics(
     assert diag["entry"]["business_id"] == BID
     assert diag["data"]["name"] == "Example Kitchens"
     assert diag["evaluated"]["is_open"] in (True, False)
+
+
+async def test_hours_and_text_sensors(
+    hass: HomeAssistant, entry: MockConfigEntry, aioclient_mock: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    freezer.move_to("2026-10-12 08:00:00+00:00")
+    info = deepcopy(INFO)
+    info["holidayHours"] = [{"date": "2026-10-14", "names": {"nl": "Feestdag"}, "overrideType": "closed"}]
+    aioclient_mock.get(INFO_URL, json=info)
+    await _setup(hass, entry)
+    st = hass.states.get("sensor.example_kitchens_opening_hours_today")
+    assert st.state == "09:00-17:00"
+    assert st.attributes["week"]["monday"] == "09:00-17:00"
+    assert st.attributes["holidays"][0] == {"date": "2026-10-14", "name": "Feestdag", "hours": "Closed"}
+    text = hass.states.get("sensor.example_kitchens_latest_announcement_text")
+    assert text.state == "Big sale"
+
+    # Rolls over at local midnight without any polling.
+    freezer.move_to("2026-10-13 22:30:00+00:00")  # Wed 00:30 local -> holiday, closed
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.example_kitchens_opening_hours_today").state == "Closed"
+
+
+async def test_text_sensor_without_post(
+    hass: HomeAssistant, entry: MockConfigEntry, aioclient_mock: AiohttpClientMocker
+) -> None:
+    info = deepcopy(INFO)
+    info["latestPost"] = None
+    aioclient_mock.get(INFO_URL, json=info)
+    await _setup(hass, entry)
+    assert hass.states.get("sensor.example_kitchens_latest_announcement_text").state == "unknown"

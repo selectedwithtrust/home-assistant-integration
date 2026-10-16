@@ -107,3 +107,25 @@ def test_timezone_is_business_not_utc() -> None:
 def test_bad_timezone_falls_back() -> None:
     data = {"timezone": "Nope/Zone", "openingHours": [day(1, "09:00", "17:00")]}
     assert evaluate(data, utc(2026, 10, 12, 8), 14).is_open
+
+
+def test_describe_day() -> None:
+    from datetime import date
+
+    from custom_components.selected_with_trust.schedule import (
+        describe_day,
+        next_local_midnight,
+    )
+
+    data = base(
+        [day(1, "09:00", "17:00", bs="12:00", be="13:00"), day(2, "00:00", "00:00"),
+         day(3, "17:30", "01:00"), day(4, closed=True)],
+        [{"date": "2026-10-19", "overrideType": "closed"}],
+    )
+    assert describe_day(data, date(2026, 10, 12)) == "09:00-12:00, 13:00-17:00"
+    assert describe_day(data, date(2026, 10, 13)) == "Open 24 hours"
+    assert describe_day(data, date(2026, 10, 14)) == "17:30-01:00"
+    assert describe_day(data, date(2026, 10, 15)) == "Closed"
+    assert describe_day(data, date(2026, 10, 19)) == "Closed"  # holiday
+    assert describe_day(data, date(2026, 10, 17)) == "Closed"  # no row
+    assert next_local_midnight(data, utc(2026, 10, 12, 8)).day == 13

@@ -78,6 +78,50 @@ def build_intervals(
     data: dict[str, Any], first_day: date, days: int
 ) -> list[Interval]:
     """Expand weekly hours + holiday overrides into merged absolute intervals."""
+    zone, weekly, holidays = _index(data)
+    intervals: list[Interval] = []
+    for offset in range(days):
+        intervals += _spans_for_day(
+            first_day + timedelta(days=offset), zone, weekly, holidays
+        )
+
+    return _merge(intervals)
+
+
+def _spans_for_day(
+    day: date,
+    zone: ZoneInfo,
+    weekly: dict[int, dict[str, Any]],
+    holidays: dict[str, dict[str, Any]],
+) -> list[Interval]:
+    """Intervals that START on ``day`` (holiday override applied), unmerged."""
+    holiday = holidays.get(day.isoformat())
+    override = holiday.get("overrideType") if holiday else None
+    if override == "closed":
+        return []
+    if override == "custom" and holiday is not None:
+        return _day_intervals(
+            day,
+            zone,
+            parse_time(holiday.get("openTime")),
+            parse_time(holiday.get("closeTime")),
+            None,
+            None,
+        )
+    row = weekly.get(day.isoweekday())
+    if row is None or row.get("isClosed"):
+        return []
+    return _day_intervals(
+        day,
+        zone,
+        parse_time(row.get("openTime")),
+        parse_time(row.get("closeTime")),
+        parse_time(row.get("breakStart")),
+        parse_time(row.get("breakEnd")),
+    )
+
+
+def _index(data: dict[str, Any]) -> tuple[ZoneInfo, dict[int, dict[str, Any]], dict[str, dict[str, Any]]]:
     zone = get_zone(data.get("timezone"))
     weekly = {
         row["dayOfWeek"]: row
@@ -89,39 +133,21 @@ def build_intervals(
         for h in data.get("holidayHours", [])
         if isinstance(h, dict) and h.get("date")
     }
+    return zone, weekly, holidays
 
-    intervals: list[Interval] = []
-    for offset in range(days):
-        day = first_day + timedelta(days=offset)
-        holiday = holidays.get(day.isoformat())
-        override = holiday.get("overrideType") if holiday else None
 
-        if override == "closed":
-            continue
-        if override == "custom" and holiday is not None:
-            intervals += _day_intervals(
-                day,
-                zone,
-                parse_time(holiday.get("openTime")),
-                parse_time(holiday.get("closeTime")),
-                None,
-                None,
-            )
-            continue
-
-        row = weekly.get(day.isoweekday())
-        if row is None or row.get("isClosed"):
-            continue
-        intervals += _day_intervals(
-            day,
-            zone,
-            parse_time(row.get("openTime")),
-            parse_time(row.get("closeTime")),
-            parse_time(row.get("breakStart")),
-            parse_time(row.get("breakEnd")),
-        )
-
-    return _merge(intervals)
+def describe_day(data: dict[str, Any], day: date) -> str:
+    """Human text for one date: ``09:00-12:00, 13:00-17:00`` / Closed / Open 24 hours."""
+    zone, weekly, holidays = _index(data)
+    spans = _spans_for_day(day, zone, weekly, holidays)
+    if not spans:
+        return "Closed"
+    parts: list[str] = []
+    for iv in spans:
+        if iv.end - iv.start >= timedelta(days=1) - timedelta(hours=1) and iv.start.timetz() == iv.end.timetz():
+            return "Open 24 hours"
+        parts.append(f"{iv.start:%H:%M}-{iv.end:%H:%M}")
+    return ", ".join(parts)
 
 
 def _merge(intervals: list[Interval]) -> list[Interval]:
@@ -157,3 +183,10 @@ def evaluate(data: dict[str, Any], now: datetime, horizon_days: int) -> Status:
             return Status(True, iv.end)
     upcoming = [iv.start for iv in intervals if iv.start > local_now]
     return Status(False, min(upcoming) if upcoming else None)
+
+
+def next_local_midnight(data: dict[str, Any], now: datetime) -> datetime:
+    """The next midnight in the business timezone (when "today" rolls over)."""
+    zone = get_zone(data.get("timezone"))
+    local = now.astimezone(zone)
+    return datetime.combine(local.date() + timedelta(days=1), time(0), tzinfo=zone)
