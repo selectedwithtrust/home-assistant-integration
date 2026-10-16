@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Follow a business",
+        "description": "Search by name, or paste the link of its Selected With Trust page.",
+        "data": { "query": "Business name or page link" }
+      },
+      "reconfigure": {
+        "title": "Follow a different business",
+        "description": "Search by name, or paste the link of its Selected With Trust page.",
+        "data": { "query": "Business name or page link" }
+      },
+      "pick": {
+        "title": "Choose the business",
+        "data": { "business": "Business" }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach Selected With Trust.",
+      "rate_limited": "Too many requests. Try again in a while.",
+      "not_found": "That business was not found or is not public.",
+      "no_results": "No businesses matched that search."
+    },
+    "abort": {
+      "already_configured": "This business is already added.",
+      "reconfigure_successful": "Now following the new business."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "open_now": { "name": "Open now" }
+    },
+    "sensor": {
+      "next_change": { "name": "Next opening or closing" },
+      "latest_post": { "name": "Latest announcement" }
+    },
+    "image": {
+      "logo": { "name": "Logo" }
+    }
+  },
+  "exceptions": {
+    "business_gone": { "message": "The business is no longer listed on Selected With Trust." },
+    "rate_limited": { "message": "Selected With Trust rate limit reached; will retry." },
+    "cannot_connect": { "message": "Error communicating with Selected With Trust: {error}" }
+  },
+  "issues": {
+    "business_gone": {
+      "title": "{name} is no longer listed",
+      "description": "Selected With Trust no longer returns {name}. It may have been removed or made private. Remove this entry, or use Reconfigure to follow another business."
+    }
+  }
+}

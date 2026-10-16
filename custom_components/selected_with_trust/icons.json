@@ -1,0 +1,9 @@
+{
+  "entity": {
+    "binary_sensor": { "open_now": { "default": "mdi:store-clock-outline", "state": { "on": "mdi:store-check", "off": "mdi:store-off" } } },
+    "sensor": {
+      "next_change": { "default": "mdi:clock-outline" },
+      "latest_post": { "default": "mdi:bullhorn-outline" }
+    }
+  }
+}
