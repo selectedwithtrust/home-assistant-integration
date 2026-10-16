@@ -6,6 +6,9 @@
         "description": "Search by name, or paste the link of its Selected With Trust page.",
         "data": {
           "query": "Business name or page link"
+        },
+        "data_description": {
+          "query": "Part of the business name, or the full link to its page on selectedwithtrust.com."
         }
       },
       "reconfigure": {
@@ -13,12 +16,18 @@
         "description": "Search by name, or paste the link of its Selected With Trust page.",
         "data": {
           "query": "Business name or page link"
+        },
+        "data_description": {
+          "query": "Part of the business name, or the full link to its page on selectedwithtrust.com."
         }
       },
       "pick": {
         "title": "Choose the business",
         "data": {
           "business": "Business"
+        },
+        "data_description": {
+          "business": "The business to follow. Results show its name and city."
         }
       }
     },

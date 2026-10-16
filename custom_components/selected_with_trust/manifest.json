@@ -1,7 +1,7 @@
 {
   "domain": "selected_with_trust",
   "name": "Selected With Trust",
-  "codeowners": [],
+  "codeowners": ["@selectedwithtrust"],
   "config_flow": true,
   "documentation": "https://github.com/selectedwithtrust/home-assistant-integration",
   "integration_type": "service",
