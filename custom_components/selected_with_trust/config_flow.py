@@ -26,7 +26,7 @@ from homeassistant.helpers.selector import (
 try:  # Home Assistant 2026.10+ ships probatio, a drop-in for voluptuous
     import probatio as vol
 except ImportError:  # pragma: no cover - older Home Assistant
-    import voluptuous as vol  # type: ignore[no-redef]
+    import voluptuous as vol  # type: ignore[no-redef,unused-ignore]
 
 from .api import (
     BusinessSummary,

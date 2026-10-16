@@ -76,3 +76,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements_test.txt
 ```
 
 The API contract lives in the SWT repo: `docs/opening-info-api.md`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
