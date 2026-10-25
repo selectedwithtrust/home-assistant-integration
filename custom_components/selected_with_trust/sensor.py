@@ -17,7 +17,7 @@ from homeassistant.util import dt as dt_util
 
 from .coordinator import SwtConfigEntry, SwtCoordinator
 from .entity import SwtEntity
-from .schedule import describe_day, get_zone
+from .schedule import describe_day
 
 PARALLEL_UPDATES = 0
 
@@ -121,15 +121,14 @@ class SwtOpeningHoursSensor(SwtEntity, SensorEntity):
         super().__init__(coordinator, "opening_hours")
 
     def _today(self) -> Any:
-        zone = get_zone((self.coordinator.data or {}).get("timezone"))
-        return dt_util.utcnow().astimezone(zone).date()
+        return dt_util.utcnow().astimezone(self.coordinator.zone).date()
 
     @property
     def native_value(self) -> str | None:
         """Return today's hours."""
         if not self.coordinator.data:
             return None
-        return describe_day(self.coordinator.data, self._today())
+        return describe_day(self.coordinator.data, self.coordinator.zone, self._today())
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
@@ -141,12 +140,14 @@ class SwtOpeningHoursSensor(SwtEntity, SensorEntity):
         week = {}
         for offset in range(7):
             day = today + timedelta(days=offset)
-            week[_DAYS[day.weekday()]] = describe_day(data, day)
+            week[_DAYS[day.weekday()]] = describe_day(data, self.coordinator.zone, day)
         holidays = [
             {
                 "date": h["date"],
                 "name": next(iter((h.get("names") or {}).values()), None),
-                "hours": describe_day(data, datetime.fromisoformat(h["date"]).date()),
+                "hours": describe_day(
+                    data, self.coordinator.zone, datetime.fromisoformat(h["date"]).date()
+                ),
             }
             for h in data.get("holidayHours", [])
             if h.get("date")

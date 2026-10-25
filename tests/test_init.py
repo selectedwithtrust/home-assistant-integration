@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from unittest.mock import patch
 from datetime import timedelta
 
+import pytest
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
@@ -238,3 +241,35 @@ async def test_no_rating_when_no_reviews(
     await _setup(hass, entry)
     assert hass.states.get("sensor.example_kitchens_rating").state == "unknown"
     assert hass.states.get("sensor.example_kitchens_reviews").state == "unknown"
+
+
+@pytest.mark.parametrize(
+    ("tz", "expected"),
+    [
+        ("America/New_York", "America/New_York"),
+        ("Nope/Zone", "Europe/Amsterdam"),  # unknown -> platform default
+        ("/etc/passwd", "Europe/Amsterdam"),  # malformed key -> ValueError path
+        (None, "Europe/Amsterdam"),
+    ],
+)
+async def test_zone_resolved_once_off_loop(
+    hass: HomeAssistant, entry: MockConfigEntry, aioclient_mock: AiohttpClientMocker,
+    tz: str | None, expected: str,
+) -> None:
+    info = deepcopy(INFO)
+    info["timezone"] = tz
+    aioclient_mock.get(INFO_URL, json=info)
+    await _setup(hass, entry)
+    assert entry.runtime_data.zone.key == expected
+
+
+async def test_zone_falls_back_to_ha_default_when_lookup_fails(
+    hass: HomeAssistant, entry: MockConfigEntry, aioclient_mock: AiohttpClientMocker,
+) -> None:
+    aioclient_mock.get(INFO_URL, json=INFO)
+    with patch(
+        "custom_components.selected_with_trust.coordinator.dt_util.async_get_time_zone",
+        return_value=None,
+    ):
+        await _setup(hass, entry)
+    assert entry.runtime_data.zone is dt_util.get_default_time_zone()

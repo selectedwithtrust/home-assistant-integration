@@ -8,14 +8,16 @@ Semantics follow the API contract (docs/opening-info-api.md in the SWT repo):
 * a break is a normal same-day interval removed from the opening interval,
 * a holiday override replaces the regular hours for that date only
   (``closed`` / ``custom``; ``regular`` or none = weekly hours).
+
+Every function takes an already-resolved ``tzinfo``. Building a ``ZoneInfo`` from a
+name reads tzdata from disk, so callers resolve it once, off the event loop.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, tzinfo
 from typing import Any
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,17 +40,9 @@ def parse_time(value: str | None) -> time | None:
         return None
 
 
-def get_zone(name: str | None) -> ZoneInfo:
-    """Resolve an IANA zone, falling back to the platform default of the API."""
-    try:
-        return ZoneInfo(name or "Europe/Amsterdam")
-    except (ZoneInfoNotFoundError, ValueError):
-        return ZoneInfo("Europe/Amsterdam")
-
-
 def _day_intervals(
     day: date,
-    zone: ZoneInfo,
+    zone: tzinfo,
     open_t: time | None,
     close_t: time | None,
     break_start: time | None,
@@ -75,10 +69,10 @@ def _day_intervals(
 
 
 def build_intervals(
-    data: dict[str, Any], first_day: date, days: int
+    data: dict[str, Any], zone: tzinfo, first_day: date, days: int
 ) -> list[Interval]:
     """Expand weekly hours + holiday overrides into merged absolute intervals."""
-    zone, weekly, holidays = _index(data)
+    weekly, holidays = _index(data)
     intervals: list[Interval] = []
     for offset in range(days):
         intervals += _spans_for_day(
@@ -90,7 +84,7 @@ def build_intervals(
 
 def _spans_for_day(
     day: date,
-    zone: ZoneInfo,
+    zone: tzinfo,
     weekly: dict[int, dict[str, Any]],
     holidays: dict[str, dict[str, Any]],
 ) -> list[Interval]:
@@ -121,8 +115,9 @@ def _spans_for_day(
     )
 
 
-def _index(data: dict[str, Any]) -> tuple[ZoneInfo, dict[int, dict[str, Any]], dict[str, dict[str, Any]]]:
-    zone = get_zone(data.get("timezone"))
+def _index(
+    data: dict[str, Any],
+) -> tuple[dict[int, dict[str, Any]], dict[str, dict[str, Any]]]:
     weekly = {
         row["dayOfWeek"]: row
         for row in data.get("openingHours", [])
@@ -133,12 +128,12 @@ def _index(data: dict[str, Any]) -> tuple[ZoneInfo, dict[int, dict[str, Any]], d
         for h in data.get("holidayHours", [])
         if isinstance(h, dict) and h.get("date")
     }
-    return zone, weekly, holidays
+    return weekly, holidays
 
 
-def describe_day(data: dict[str, Any], day: date) -> str:
+def describe_day(data: dict[str, Any], zone: tzinfo, day: date) -> str:
     """Human text for one date: ``09:00-12:00, 13:00-17:00`` / Closed / Open 24 hours."""
-    zone, weekly, holidays = _index(data)
+    weekly, holidays = _index(data)
     spans = _spans_for_day(day, zone, weekly, holidays)
     if not spans:
         return "Closed"
@@ -170,13 +165,14 @@ class Status:
     next_change: datetime | None
 
 
-def evaluate(data: dict[str, Any], now: datetime, horizon_days: int) -> Status:
+def evaluate(
+    data: dict[str, Any], zone: tzinfo, now: datetime, horizon_days: int
+) -> Status:
     """Return whether the business is open at ``now`` and when that next flips."""
-    zone = get_zone(data.get("timezone"))
     local_now = now.astimezone(zone)
     # Start one day back so an overnight span that began yesterday is included.
     intervals = build_intervals(
-        data, local_now.date() - timedelta(days=1), horizon_days + 1
+        data, zone, local_now.date() - timedelta(days=1), horizon_days + 1
     )
     for iv in intervals:
         if iv.start <= local_now < iv.end:
@@ -185,8 +181,7 @@ def evaluate(data: dict[str, Any], now: datetime, horizon_days: int) -> Status:
     return Status(False, min(upcoming) if upcoming else None)
 
 
-def next_local_midnight(data: dict[str, Any], now: datetime) -> datetime:
+def next_local_midnight(zone: tzinfo, now: datetime) -> datetime:
     """The next midnight in the business timezone (when "today" rolls over)."""
-    zone = get_zone(data.get("timezone"))
     local = now.astimezone(zone)
     return datetime.combine(local.date() + timedelta(days=1), time(0), tzinfo=zone)

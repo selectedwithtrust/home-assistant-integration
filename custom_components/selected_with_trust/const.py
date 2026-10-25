@@ -20,5 +20,8 @@ SCHEDULE_HORIZON_DAYS: Final = 14
 
 ISSUE_BUSINESS_GONE: Final = "business_gone"
 
+# Platform default of the API; used when it sends no or an unknown timezone.
+DEFAULT_TIMEZONE: Final = "Europe/Amsterdam"
+
 CONF_CLOSING_SOON_MINUTES: Final = "closing_soon_minutes"
 DEFAULT_CLOSING_SOON_MINUTES: Final = 30
